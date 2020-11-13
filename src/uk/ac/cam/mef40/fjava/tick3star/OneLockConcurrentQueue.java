@@ -44,7 +44,9 @@ public class OneLockConcurrentQueue<T> implements ConcurrentQueue<T> {
 
   public synchronized T poll() {
     if (first != null) {
-      return first.val;
+      T val = first.val;
+      first = first.next;
+      return val;
     }
     return null;
   }
