@@ -17,10 +17,35 @@
 package uk.ac.cam.mef40.fjava.tick3star;
 
 public class OneLockConcurrentQueue<T> implements ConcurrentQueue<T> {
+  private static class Link<L> {
+    L val;
+    Link<L> next;
 
-  public void offer(T message) {}
+    Link(L val) {
+      this.val = val;
+      this.next = null;
+    }
+  }
 
-  public T poll() {
+  private Link<T> first = null;
+  private Link<T> last = null;
+
+  public synchronized void offer(T message) {
+    Link<T> link = new Link<>(message);
+    if (first == null) {
+      // if queue empty
+      first = link;
+      last = link;
+    } else {
+      last.next = link;
+      last = link;
+    }
+  }
+
+  public synchronized T poll() {
+    if (first != null) {
+      return first.val;
+    }
     return null;
   }
 }
