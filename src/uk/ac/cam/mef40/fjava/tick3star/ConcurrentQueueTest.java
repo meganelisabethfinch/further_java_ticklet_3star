@@ -109,7 +109,7 @@ public class ConcurrentQueueTest {
   public static void main(String[] args) {
     for (int i = 0; i < 10; ++i) {
       if (!new ConcurrentQueueTest(new OneLockConcurrentQueue<String>(), 5, 5).run()) return;
-      //if (!new ConcurrentQueueTest(new TwoLockConcurrentQueue<String>(), 5, 5).run()) return;
+      if (!new ConcurrentQueueTest(new TwoLockConcurrentQueue<String>(), 5, 5).run()) return;
       //if (!new ConcurrentQueueTest(new NoLockConcurrentQueue<String>(), 5, 5).run()) return;
     }
   }
