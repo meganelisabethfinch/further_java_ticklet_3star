@@ -42,23 +42,25 @@ public class NoLockConcurrentQueue<T> implements ConcurrentQueue<T> {
   public void offer(T message) {
     Link<T> node = new Link<>(message); // Allocate new node with value
     Link<T> tail;
-    while (true) { // Keep trying until enqueue done
-      tail = Tail; // read Tail
+
+    while (true) {
+      tail = Tail;
       var next = tail.next;
       if (tail == Tail) {
-        if (next.next == null) {
-          AtomicReference<Link<T>> ar = new AtomicReference<>(tail.next);
-          if (ar.compareAndSet(next, node)) {
+        if (next == null) {
+          // if (tail.next == next) { tail = node; }
+          if (new AtomicReference<>(tail.next).compareAndSet(next, node)) {
             break;
           }
         } else {
-          AtomicReference<Link<T>> ar = new AtomicReference<>(Tail);
-          ar.compareAndSet(tail, next.next);
+          // if (Tail == tail) { tail = next.ptr; } ?
+          new AtomicReference<>(Tail).compareAndSet(tail, next.next);
         }
       }
     }
-    AtomicReference<Link<T>> ar = new AtomicReference<>(Tail);
-    ar.compareAndSet(tail, node); // Enqueue done. Try to swing tail to inserted node.
+
+    // if (Tail == tail) { Tail = node; }
+    new AtomicReference<>(Tail).compareAndSet(tail, node); // Enqueue done. Try to swing tail to inserted node.
     System.out.println("Offered " + message);
   }
 
