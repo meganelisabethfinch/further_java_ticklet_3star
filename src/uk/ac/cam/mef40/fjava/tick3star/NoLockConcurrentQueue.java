@@ -16,76 +16,68 @@
 
 package uk.ac.cam.mef40.fjava.tick3star;
 
-import javax.swing.*;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class NoLockConcurrentQueue<T> implements ConcurrentQueue<T> {
   private static class Link<L> {
-    L val;
-    Link<L> next;
+    final L val;
+    AtomicReference<Link<L>> next;
 
-    Link(L val) {
+    Link(L val, AtomicReference<Link<L>> next) {
       this.val = val;
-      this.next = null;
+      this.next = next == null ? new AtomicReference<>(null) : next;
     }
   }
 
-  private Link<T> Head;
-  private Link<T> Tail;
+  private Link<T> dummyNode = new Link<>(null, null);
+  private AtomicReference<Link<T>> Head;
+  private AtomicReference<Link<T>> Tail;
 
   public NoLockConcurrentQueue() {
-    Link<T> node = new Link<>(null);
-    Head = null;
-    Tail = null;
+    Head = new AtomicReference<>(dummyNode);
+    Tail = new AtomicReference<>(dummyNode);
   }
 
   public void offer(T message) {
-    Link<T> node = new Link<>(message); // Allocate new node with value
+    Link<T> newNode = new Link<>(message, null);
     Link<T> tail;
-
     while (true) {
-      tail = Tail;
-      var next = tail.next;
-      if (tail == Tail) {
+      tail = Tail.get();
+      Link<T> next = tail.next.get();
+      if (tail == Tail.get()) {
         if (next == null) {
-          // if (tail.next == next) { tail = node; }
-          if (new AtomicReference<>(tail.next).compareAndSet(next, node)) {
+          if (tail.next.compareAndSet(next, newNode)) {
             break;
           }
         } else {
-          // if (Tail == tail) { tail = next.ptr; } ?
-          new AtomicReference<>(Tail).compareAndSet(tail, next.next);
+          Tail.compareAndSet(tail, next);
         }
       }
     }
-
-    // if (Tail == tail) { Tail = node; }
-    new AtomicReference<>(Tail).compareAndSet(tail, node); // Enqueue done. Try to swing tail to inserted node.
-    System.out.println("Offered " + message);
+    Tail.compareAndSet(tail, newNode);
   }
 
   public T poll() {
     T val;
+
     while (true) {
-      var head = Head;
-      var tail = Tail;
-      var next = head.next;
-      if (head == Head) {
-        if (head.next == tail.next) {
-          if (next.next == null) {
-            System.out.println("Polled null");
-            return null; // Queue empty. Couldn't dequeue.
+      Link<T> head = Head.get();
+      Link<T> tail = Tail.get();
+      Link<T> next = head.next.get();
+      if (head == Head.get()) {
+        if (head == tail) {
+          if (next == null) {
+            return null;
           }
-          new AtomicReference<>(Tail).compareAndSet(tail, next.next);
+          Tail.compareAndSet(tail, next);
         } else {
-          val = next.next.val;
-          if (new AtomicReference<>(Head).compareAndSet(head, next.next)) {
+          val = next.val;
+          if (Head.compareAndSet(head, next)) {
             break;
           }
         }
       }
     }
-    System.out.println("Polled " + val);
     return val;
   }
 }
